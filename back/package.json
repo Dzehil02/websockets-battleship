@@ -1,0 +1,32 @@
+{
+    "name": "simple-crud-api",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "start:dev": "ts-node-dev --respawn src/index.ts",
+        "start:prod": "webpack --env mode=production && node build/bundle.js",
+        "build:dev": "webpack --env mode=development"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "dotenv": "^16.4.1",
+        "uuid": "^9.0.1",
+        "ws": "^8.16.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.17",
+        "@types/uuid": "^9.0.8",
+        "@types/webpack": "^5.28.5",
+        "@types/ws": "^8.5.10",
+        "cross-env": "^7.0.3",
+        "ts-loader": "^9.5.1",
+        "ts-node": "^10.9.2",
+        "ts-node-dev": "^2.0.0",
+        "typescript": "^5.3.3",
+        "webpack": "^5.90.1",
+        "webpack-cli": "^5.1.4"
+    }
+}

@@ -1,5 +1,6 @@
 # dependencies
 /node_modules
+/back/node_modules
 
 # System Files
 .DS_Store
