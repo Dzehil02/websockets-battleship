@@ -7,6 +7,7 @@ export interface BuildEnv {
 export type MessageType =
     | 'reg'
     | 'create_room'
+    | 'create_game'
     | 'update_room'
     | 'update_winners'
     | 'add_user_to_room'
@@ -30,7 +31,7 @@ export interface RoomUser {
     index: string | undefined;
 }
 
-interface RoomData {
+export interface RoomData {
     roomId: string;
     roomUsers: RoomUser[];
 }
@@ -60,7 +61,7 @@ export interface AddUserToRoom {
     id: string;
 }
 
-export interface Game {
+export interface CreateGame {
     type: MessageType;
     data: {
         idGame: string;

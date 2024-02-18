@@ -14,11 +14,6 @@ export const winnersData: Winners = {
     id,
 };
 
-export const userData: User = {
-    name: '',
-    index: '',
-    error: false,
-    errorText: 'Error text from reg',
-};
+export const users: Map<string, User> = new Map();
 
 export const roomUsers: RoomUser[] = [];

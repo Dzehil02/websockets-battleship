@@ -1,7 +1,7 @@
-import {WebSocketServer} from 'ws';
+import WebSocket, {WebSocketServer} from 'ws';
 import dotenv from 'dotenv';
-import {userData, winnersData, roomData, roomUsers} from './store/store';
-import {createRoom, regUser} from './service/websocketHandlers';
+import {winnersData, roomData} from './store/store';
+import {createRoom, regUser, addUserToRoom, createGame} from './service/websocketHandlers';
 import {parseObject, stringifyObject} from './helpers/helpers';
 
 dotenv.config();
@@ -19,22 +19,42 @@ wss.on('connection', function connection(ws) {
 
         const dataObj = parseObject(data.toString());
 
-        switch (dataObj.type) {
-            case 'reg':
-                const userReceivedData = parseObject(dataObj.data);
-                const userSendData = regUser(userReceivedData);
-                dataObj.data = stringifyObject(userSendData);
-                ws.send(stringifyObject(dataObj));
-                ws.send(stringifyObject({...roomData, data: stringifyObject(roomData.data)}));
-                ws.send(stringifyObject({...winnersData, data: stringifyObject(winnersData.data)}));
-                break;
-            case 'create_room':
-                const room = createRoom();
-                ws.send(stringifyObject({...room, data: stringifyObject(roomData.data)}));
-                break;
+        wss.clients.forEach((client) => {
+            switch (dataObj.type) {
+                case 'reg':
+                    if (client === ws && client.readyState === WebSocket.OPEN) {
+                        const userReceivedData = parseObject(dataObj.data);
+                        const userSendData = regUser(userReceivedData);
+                        dataObj.data = stringifyObject(userSendData);
+                        client.send(stringifyObject(dataObj));
+                    }
+                    client.send(stringifyObject({...roomData, data: stringifyObject(roomData.data)}));
+                    client.send(stringifyObject({...winnersData, data: stringifyObject(winnersData.data)}));
+                    break;
+                case 'create_room':
+                    if (client === ws && client.readyState === WebSocket.OPEN) {
+                        const room = createRoom();
+                        client.send(stringifyObject({...roomData, data: stringifyObject(room.data)}));
+                    }
+                    break;
+                case 'add_user_to_room':
+                    if (client.readyState === WebSocket.OPEN) {
+                        addUserToRoom(dataObj);
+                        client.send(stringifyObject({...roomData, data: stringifyObject(roomData.data)}));
+                        const newGame = createGame(roomData.data);
+                        client.send(stringifyObject({...newGame, data: stringifyObject(newGame.data)}));
+                        console.log(stringifyObject(newGame));
+                    }
+                    console.log(stringifyObject(roomData))
+                    break;
+                case 'create_game':
+                    console.log('Game started');
+                    console.log(dataObj);
+                    break;
 
-            default:
-                break;
-        }
+                default:
+                    break;
+            }
+        });
     });
 });
