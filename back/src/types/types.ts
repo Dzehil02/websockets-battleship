@@ -62,10 +62,39 @@ export interface AddUserToRoom {
 }
 
 export interface CreateGame {
-    type: MessageType;
-    data: {
+    type?: MessageType;
+    data?: {
         idGame: string;
         idPlayer: string;
+    };
+    id?: string;
+}
+
+interface Ship {
+    position: {
+        x: number;
+        y: number;
+    };
+    direction: boolean;
+    length: number;
+    type: "small" | "medium" | "large" | "huge";
+}
+
+export interface StartGame {
+    type: MessageType;
+    data: {
+        ships: Ship[];
+        currentPlayerIndex: string;
+    };
+    id: string;
+}
+
+export interface AddShips {
+    type: MessageType;
+    data: {
+        gameId: string;
+        ships: Ship[];
+        indexPlayer: string;
     };
     id: string;
 }
