@@ -1,4 +1,4 @@
-import { Room, RoomUser, User, Winners } from "../types/types";
+import { Room, RoomUser, StartGame, User, Winners } from "../types/types";
 
 const id = '0';
 
@@ -17,3 +17,5 @@ export const winnersData: Winners = {
 export const users: Map<string, User> = new Map();
 
 export const roomUsers: RoomUser[] = [];
+
+export const shipsOfPlayers: StartGame[] = [];

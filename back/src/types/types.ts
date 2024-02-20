@@ -28,7 +28,7 @@ export interface User {
 
 export interface RoomUser {
     name: string;
-    index: string | undefined;
+    index?: string;
 }
 
 export interface RoomData {
@@ -44,7 +44,7 @@ export interface Room {
 
 interface WinnersData {
     name: string;
-    wins: number;
+    wins: string;
 }
 
 export interface Winners {
@@ -62,22 +62,22 @@ export interface AddUserToRoom {
 }
 
 export interface CreateGame {
-    type?: MessageType;
-    data?: {
+    type: MessageType;
+    data: {
         idGame: string;
         idPlayer: string;
     };
-    id?: string;
+    id: string;
 }
 
 interface Ship {
     position: {
-        x: number;
-        y: number;
+        x: string;
+        y: string;
     };
     direction: boolean;
-    length: number;
-    type: "small" | "medium" | "large" | "huge";
+    length: string;
+    type: 'small' | 'medium' | 'large' | 'huge';
 }
 
 export interface StartGame {
@@ -104,5 +104,26 @@ export interface Turn {
     data: {
         currentPlayer: string;
     };
+    id: string;
+}
+
+export type Status = 'miss' | 'killed' | 'shot';
+
+export interface AttackAnswer {
+    type: MessageType;
+    data: {
+        position: {
+            x: string;
+            y: string;
+        };
+        currentPlayer: string;
+        status: Status;
+    };
+    id: string;
+}
+
+export interface Attack {
+    type: MessageType;
+    data: {gameId: string; x: string; y: string; indexPlayer: string};
     id: string;
 }

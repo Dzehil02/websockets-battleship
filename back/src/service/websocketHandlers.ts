@@ -1,10 +1,23 @@
-import {AddShips, AddUserToRoom, CreateGame, Room, RoomData, StartGame, Turn, User} from '../types/types';
+import {
+    AddShips,
+    AddUserToRoom,
+    Attack,
+    AttackAnswer,
+    CreateGame,
+    Room,
+    RoomData,
+    RoomUser,
+    StartGame,
+    Status,
+    Turn,
+    User,
+} from '../types/types';
 import {users, roomData, roomUsers, winnersData} from '../store/store';
-import {parseObject} from '../helpers/helpers';
+import {getShipsOfEnemy, parseObject} from '../helpers/helpers';
 
 let indexRoom = 1;
 
-export const getUsers = (): User[] => {
+export const getRoomUsers = (): RoomUser[] => {
     return roomUsers;
 };
 
@@ -13,7 +26,7 @@ export const regUser = (userReceivedData: User, playerId: string): User => {
         name: userReceivedData.name,
         index: playerId,
         error: false,
-        errorText: '',
+        errorText: 'Registration error',
     };
 
     users.set(newUser.index, newUser);
@@ -62,16 +75,61 @@ export const addShipsForPlayer = (dataOfGame: AddShips): StartGame => {
     };
 };
 
-export const turn = (dataOfGame: StartGame): Turn => {
+export const turn = (playerId: string): Turn => {
     return {
         type: 'turn',
         data: {
-            currentPlayer: dataOfGame.data.currentPlayerIndex,
+            currentPlayer: playerId,
         },
         id: '0',
     };
 };
 
-export const attack = (position: any, playerId: string): void => {
-    console.log(parseObject(position.data), playerId);
+export const attack = (attack: Attack, shipsOfPlayers: StartGame[]): AttackAnswer => {
+    const result = checkAttack(attack, shipsOfPlayers);
+    return result;
+};
+
+export const checkAttack = (attack: Attack, shipsOfPlayers: StartGame[]): AttackAnswer => {
+    const attackData = parseObject(attack.data);
+    let status: Status = 'miss';
+    const currentPlayer = attackData.indexPlayer;
+    const shipsOfEnemy = shipsOfPlayers.filter((ship) => ship.data.currentPlayerIndex !== currentPlayer);
+
+    const goal = shipsOfEnemy[0].data.ships.find(
+            (ship) => ship.position.x === attackData.x && ship.position.y === attackData.y
+        )
+
+    if (goal) {
+        switch (goal.type) {
+            case 'small':
+                status = 'killed';
+                break;
+            case 'medium':
+                
+                break;
+            case 'large':
+                
+                break;
+            case 'huge':
+                
+                break;
+        
+            default:
+                break;
+        }
+    }
+
+    return {
+        type: 'attack',
+        data: {
+            position: {
+                x: attackData.x,
+                y: attackData.y,
+            },
+            currentPlayer: attackData.indexPlayer,
+            status,
+        },
+        id: '0',
+    };
 };
