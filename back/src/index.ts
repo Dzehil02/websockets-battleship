@@ -1,7 +1,7 @@
 import WebSocket, {WebSocketServer} from 'ws';
 import dotenv from 'dotenv';
 import {winnersData, roomData} from './store/store';
-import {createRoom, regUser, addUserToRoom, createGame, addShipsForPlayer, attack} from './service/websocketHandlers';
+import {createRoom, regUser, addUserToRoom, createGame, addShipsForPlayer, attack, turn} from './service/websocketHandlers';
 import {parseObject, stringifyObject} from './helpers/helpers';
 import {CreateGame, StartGame} from './types/types';
 
@@ -54,8 +54,8 @@ wss.on('connection', function connection(ws: ClientWebsocket) {
             case 'add_user_to_room':
                 if (ws.readyState === WebSocket.OPEN) {
                     addUserToRoom(dataObj, ws.playerId);
-                    const newGame: CreateGame = createGame(roomData.data, ws.playerId);
                     wss.clients.forEach((client) => {
+                        const newGame: CreateGame = createGame(roomData.data, (client as ClientWebsocket).playerId);
                         client.send(stringifyObject({...roomData, data: stringifyObject(roomData.data)}));
                         client.send(stringifyObject({...newGame, data: stringifyObject(newGame.data)}));
                         client.send(stringifyObject({...roomData, data: stringifyObject([])}));
@@ -64,15 +64,17 @@ wss.on('connection', function connection(ws: ClientWebsocket) {
                 break;
             case 'add_ships':
                 console.log('Game started');
-                const shipsOfCurrentPlayer = addShipsForPlayer(dataObj, ws.playerId);
+                const shipsOfCurrentPlayer = addShipsForPlayer(dataObj);
                 shipsOfPlayers.push(shipsOfCurrentPlayer);
 
                 if (shipsOfPlayers.length === 2) {
+                    const currentTurn = turn(shipsOfCurrentPlayer)
                     wss.clients.forEach((client) => {
                         const shipsOfClient = shipsOfPlayers.find(
                             (player) => player.data.currentPlayerIndex === (client as ClientWebsocket).playerId
                         );
                         client.send(stringifyObject({...shipsOfClient, data: stringifyObject(shipsOfClient!.data)}));
+                        client.send(stringifyObject({...currentTurn, data: stringifyObject(currentTurn.data)}));
                     });
                 }
                 break;

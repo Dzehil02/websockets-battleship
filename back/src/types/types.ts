@@ -98,3 +98,11 @@ export interface AddShips {
     };
     id: string;
 }
+
+export interface Turn {
+    type: MessageType;
+    data: {
+        currentPlayer: string;
+    };
+    id: string;
+}

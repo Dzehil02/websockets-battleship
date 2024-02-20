@@ -1,4 +1,4 @@
-import {AddShips, AddUserToRoom, CreateGame, Room, RoomData, StartGame, User} from '../types/types';
+import {AddShips, AddUserToRoom, CreateGame, Room, RoomData, StartGame, Turn, User} from '../types/types';
 import {users, roomData, roomUsers, winnersData} from '../store/store';
 import {parseObject} from '../helpers/helpers';
 
@@ -51,15 +51,25 @@ export const createGame = (dataOfRoom: RoomData[], playerId: string): CreateGame
     };
 };
 
-export const addShipsForPlayer = (dataOfGame: AddShips, playerId: string): StartGame => {
+export const addShipsForPlayer = (dataOfGame: AddShips): StartGame => {
     return {
         type: 'start_game',
         data: {
             ships: parseObject(dataOfGame.data).ships,
-            currentPlayerIndex: playerId,
+            currentPlayerIndex: parseObject(dataOfGame.data).indexPlayer,
         },
         id: '0',
-    }
+    };
+};
+
+export const turn = (dataOfGame: StartGame): Turn => {
+    return {
+        type: 'turn',
+        data: {
+            currentPlayer: dataOfGame.data.currentPlayerIndex,
+        },
+        id: '0',
+    };
 };
 
 export const attack = (position: any, playerId: string): void => {
