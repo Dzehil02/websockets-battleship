@@ -4,16 +4,20 @@ import {
     Attack,
     AttackAnswer,
     CreateGame,
+    Position,
     Room,
     RoomData,
     RoomUser,
+    Ship,
     StartGame,
     Status,
     Turn,
     User,
 } from '../types/types';
-import {users, roomData, roomUsers, winnersData} from '../store/store';
-import {getShipsOfEnemy, parseObject} from '../helpers/helpers';
+import {users, roomData, roomUsers, winnersData, shipsOfPlayers} from '../store/store';
+import {fillMapWithShips, getShipsOfEnemy, parseObject} from '../helpers/helpers';
+import {mapWithShipsOfPlayer1, mapWithShipsOfPlayer2} from '..';
+import {stringify} from 'querystring';
 
 let indexRoom = 1;
 
@@ -85,36 +89,60 @@ export const turn = (playerId: string): Turn => {
     };
 };
 
-export const attack = (attack: Attack, shipsOfPlayers: StartGame[]): AttackAnswer => {
-    const result = checkAttack(attack, shipsOfPlayers);
+export const attack = (attack: Attack): AttackAnswer => {
+    const result = checkAttack(attack);
     return result;
 };
 
-export const checkAttack = (attack: Attack, shipsOfPlayers: StartGame[]): AttackAnswer => {
+export const checkAttack = (attack: Attack): AttackAnswer => {
     const attackData = parseObject(attack.data);
     let status: Status = 'miss';
     const currentPlayer = attackData.indexPlayer;
-    const shipsOfEnemy = shipsOfPlayers.filter((ship) => ship.data.currentPlayerIndex !== currentPlayer);
 
-    const goal = shipsOfEnemy[0].data.ships.find(
-            (ship) => ship.position.x === attackData.x && ship.position.y === attackData.y
-        )
+    const enemyShips = mapWithShipsOfPlayer1.has(currentPlayer)
+        ? mapWithShipsOfPlayer1.get(currentPlayer)
+        : mapWithShipsOfPlayer2.get(currentPlayer);
+
+    const key = JSON.stringify({
+        x: attackData.x,
+        y: attackData.y,
+    });
+
+    const goal = enemyShips?.has(key) ? enemyShips!.get(key) : undefined;
+    console.log(goal);
+
+    function checkkilled(map: Map<string, any>): Boolean {
+        const values = map!.values();
+        const valuesArray = Array.from(values);
+
+        let lookForShip = valuesArray.find(
+            (value) =>
+                value.shipData.position.x === goal.shipData.position.x &&
+                value.shipData.position.y === goal.shipData.position.y
+        );
+        if (lookForShip) {
+            return true;
+        }
+        return false;
+    }
 
     if (goal) {
-        switch (goal.type) {
+        switch (goal.shipData.type) {
             case 'small':
                 status = 'killed';
                 break;
             case 'medium':
-                
-                break;
+                let x = enemyShips?.delete(key);
+                console.log(x);
+                status = checkkilled(enemyShips!) ? 'shot' : 'killed';
             case 'large':
-                
+                enemyShips?.delete(key);
+                status = checkkilled(enemyShips!) ? 'shot' : 'killed';
                 break;
             case 'huge':
-                
+                enemyShips?.delete(key);
+                status = checkkilled(enemyShips!) ? 'shot' : 'killed';
                 break;
-        
             default:
                 break;
         }

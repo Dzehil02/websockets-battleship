@@ -11,8 +11,8 @@ import {
     turn,
     checkAttack,
 } from './service/websocketHandlers';
-import {getShips, parseObject, stringifyObject} from './helpers/helpers';
-import {CreateGame, StartGame, Turn} from './types/types';
+import {fillMapWithShips, getShips, parseObject, stringifyObject} from './helpers/helpers';
+import {CreateGame, Position, StartGame, Turn} from './types/types';
 
 export interface ClientWebsocket extends WebSocket {
     playerId: string;
@@ -25,6 +25,9 @@ const wss = new WebSocketServer({port: PORT});
 
 let indexPlayer = 1;
 let currentTurn: Turn;
+
+export let mapWithShipsOfPlayer1: Map<string, Map<string, any>>;
+export let mapWithShipsOfPlayer2: Map<string, Map<string, any>>;
 
 wss.on('connection', function connection(ws: ClientWebsocket) {
     console.log(`Server is running on port ${PORT}`);
@@ -81,6 +84,16 @@ wss.on('connection', function connection(ws: ClientWebsocket) {
                 if (shipsOfPlayers.length === 2) {
                     currentTurn = turn(ws.playerId);
 
+                    mapWithShipsOfPlayer1 = new Map();
+                    mapWithShipsOfPlayer2 = new Map();
+
+                    mapWithShipsOfPlayer1.set(shipsOfPlayers[0].data.currentPlayerIndex, fillMapWithShips(shipsOfPlayers[1].data.ships));
+                    mapWithShipsOfPlayer2.set(shipsOfPlayers[1].data.currentPlayerIndex, fillMapWithShips(shipsOfPlayers[0].data.ships));
+
+                    console.log('Full Boards: ')
+                    console.log(mapWithShipsOfPlayer1);
+                    console.log(mapWithShipsOfPlayer2);
+
                     wss.clients.forEach((client) => {
                         const shipsOfClient = getShips(shipsOfPlayers, (client as ClientWebsocket).playerId);
                         client.send(stringifyObject({...shipsOfClient, data: stringifyObject(shipsOfClient!.data)}));
@@ -90,7 +103,7 @@ wss.on('connection', function connection(ws: ClientWebsocket) {
                 break;
             case 'attack':
                 if (currentTurn.data.currentPlayer === ws.playerId) {
-                    const currentAttack = attack(dataObj, shipsOfPlayers);
+                    const currentAttack = attack(dataObj);
                     let currentPlayer = currentAttack.data.currentPlayer;
                     
                     const firstPlayer = currentPlayer;
@@ -104,8 +117,8 @@ wss.on('connection', function connection(ws: ClientWebsocket) {
                             
                             currentTurn = turn(currentPlayer);
                             
-                            console.log(currentAttack);
-                            console.log(currentTurn);
+                            // console.log(currentAttack);
+                            // console.log(currentTurn);
                             
                            
                     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ?????????????????????????

@@ -70,14 +70,19 @@ export interface CreateGame {
     id: string;
 }
 
-interface Ship {
+export interface Ship {
     position: {
-        x: string;
-        y: string;
+        x: number;
+        y: number;
     };
     direction: boolean;
-    length: string;
+    length: number;
     type: 'small' | 'medium' | 'large' | 'huge';
+}
+
+export interface Position {
+    x: number;
+    y: number;
 }
 
 export interface StartGame {
@@ -113,8 +118,8 @@ export interface AttackAnswer {
     type: MessageType;
     data: {
         position: {
-            x: string;
-            y: string;
+            x: number;
+            y: number;
         };
         currentPlayer: string;
         status: Status;
@@ -124,6 +129,6 @@ export interface AttackAnswer {
 
 export interface Attack {
     type: MessageType;
-    data: {gameId: string; x: string; y: string; indexPlayer: string};
+    data: {gameId: string; x: number; y: number; indexPlayer: string};
     id: string;
 }
