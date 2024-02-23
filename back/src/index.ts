@@ -104,14 +104,13 @@ wss.on('connection', function connection(ws: ClientWebsocket) {
             case 'attack':
                 if (currentTurn.data.currentPlayer === ws.playerId) {
                     const currentAttack = attack(dataObj);
-                    let currentPlayer = currentAttack.data.currentPlayer;
-                    
+                    let currentPlayer = currentAttack[0].data.currentPlayer;
                     const firstPlayer = currentPlayer;
                     const secondPlayer = shipsOfPlayers.filter(
                             (player) => player.data.currentPlayerIndex !== currentPlayer
                         )[0].data.currentPlayerIndex;
                         
-                        if (currentAttack.data.status === 'miss') {
+                        if (currentAttack[0].data.status === 'miss') {
                                 currentPlayer = currentPlayer === firstPlayer ? secondPlayer : firstPlayer;
                             }
                             
@@ -172,8 +171,14 @@ wss.on('connection', function connection(ws: ClientWebsocket) {
                         // });
                         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ?????????????????????????
 
-                        client.send(stringifyObject({...currentAttack, data: stringifyObject(currentAttack!.data)}));
+                        currentAttack.forEach((attack) => {
+                            client.send(
+                                stringifyObject({...attack, data: stringifyObject(attack!.data)})
+                            )
+                        })
                         client.send(stringifyObject({...currentTurn, data: stringifyObject(currentTurn.data)}));
+
+                        // client.send(stringifyObject({...currentAttack, data: stringifyObject(currentAttack!.data)}));
                     });
                 }
                 break;

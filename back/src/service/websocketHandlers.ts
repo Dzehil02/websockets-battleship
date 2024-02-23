@@ -89,15 +89,112 @@ export const turn = (playerId: string): Turn => {
     };
 };
 
-export const attack = (attack: Attack): AttackAnswer => {
+export const attack = (attack: Attack): AttackAnswer[] => {
     const result = checkAttack(attack);
     return result;
 };
 
-export const checkAttack = (attack: Attack): AttackAnswer => {
+function checkkilled(map: Map<string, any>, goal: {shipData: Ship}): Boolean {
+    const values = map!.values();
+    const valuesArray = Array.from(values);
+
+    let lookForShip = valuesArray.find(
+        (value) =>
+            value.shipData.position.x === goal.shipData.position.x &&
+            value.shipData.position.y === goal.shipData.position.y
+    );
+    if (lookForShip) {
+        return true;
+    }
+    return false;
+}
+
+function addResult(resultArray: AttackAnswer[], attack: AttackAnswer, goalData: Ship, status: Status): AttackAnswer[] {
+    console.log('I am');
+    const {position, direction, length} = goalData;
+    let x = position.x;
+    let y = position.y;
+
+    console.log(x, y);
+
+    if (status === 'killed') {
+        for (let i = 0; i < length; i++) {
+            let attackData = {
+                ...attack,
+                data: {
+                    ...attack.data,
+                    position: {
+                        x,
+                        y,
+                    },
+                    status,
+                },
+            };
+
+            if (direction) {
+                y++;
+            } else {
+                x++;
+            }
+
+            resultArray.push(attackData);
+        }
+// Дописать логику добавления точек вокруг корабля
+        // for (let i = 0; i < length; i++) {
+        //     let attackData = {
+        //         ...attack,
+        //         data: {
+        //             ...attack.data,
+        //             position: {
+        //                 x,
+        //                 y,
+        //             },
+        //             status,
+        //         },
+        //     };
+
+        //     if (direction) {
+        //         y++;
+        //     } else {
+        //         x++;
+        //     }
+
+        //     resultArray.push(attackData);
+        // }
+
+    } else {
+        let attackData = {
+            ...attack,
+            data: {
+                ...attack.data,
+                status: status,
+            },
+        };
+        resultArray.push(attackData);
+    }
+    console.log(resultArray);
+    return resultArray;
+}
+
+export const checkAttack = (attack: Attack): AttackAnswer[] => {
     const attackData = parseObject(attack.data);
     let status: Status = 'miss';
     const currentPlayer = attackData.indexPlayer;
+
+    const currentAttack: AttackAnswer = {
+        type: 'attack',
+        data: {
+            position: {
+                x: attackData.x,
+                y: attackData.y,
+            },
+            currentPlayer: attackData.indexPlayer,
+            status,
+        },
+        id: '0',
+    };
+
+    let result: AttackAnswer[] = [];
 
     const enemyShips = mapWithShipsOfPlayer1.has(currentPlayer)
         ? mapWithShipsOfPlayer1.get(currentPlayer)
@@ -111,53 +208,35 @@ export const checkAttack = (attack: Attack): AttackAnswer => {
     const goal = enemyShips?.has(key) ? enemyShips!.get(key) : undefined;
     console.log(goal);
 
-    function checkkilled(map: Map<string, any>): Boolean {
-        const values = map!.values();
-        const valuesArray = Array.from(values);
-
-        let lookForShip = valuesArray.find(
-            (value) =>
-                value.shipData.position.x === goal.shipData.position.x &&
-                value.shipData.position.y === goal.shipData.position.y
-        );
-        if (lookForShip) {
-            return true;
-        }
-        return false;
-    }
-
     if (goal) {
         switch (goal.shipData.type) {
             case 'small':
+                enemyShips?.delete(key);
                 status = 'killed';
+                result = addResult(result, currentAttack, goal.shipData, status);
                 break;
             case 'medium':
-                let x = enemyShips?.delete(key);
-                console.log(x);
-                status = checkkilled(enemyShips!) ? 'shot' : 'killed';
+                enemyShips?.delete(key);
+                status = checkkilled(enemyShips!, goal) ? 'shot' : 'killed';
+                result = addResult(result, currentAttack, goal.shipData, status);
+                break;
             case 'large':
                 enemyShips?.delete(key);
-                status = checkkilled(enemyShips!) ? 'shot' : 'killed';
+                status = checkkilled(enemyShips!, goal) ? 'shot' : 'killed';
+                result = addResult(result, currentAttack, goal.shipData, status);
                 break;
             case 'huge':
                 enemyShips?.delete(key);
-                status = checkkilled(enemyShips!) ? 'shot' : 'killed';
+                status = checkkilled(enemyShips!, goal) ? 'shot' : 'killed';
+                result = addResult(result, currentAttack, goal.shipData, status);
                 break;
             default:
                 break;
         }
+    } else {
+        result.push(currentAttack);
     }
-
-    return {
-        type: 'attack',
-        data: {
-            position: {
-                x: attackData.x,
-                y: attackData.y,
-            },
-            currentPlayer: attackData.indexPlayer,
-            status,
-        },
-        id: '0',
-    };
+    console.log('11111111111111111111111');
+    console.log(result);
+    return result;
 };
