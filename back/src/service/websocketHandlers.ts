@@ -110,16 +110,14 @@ function checkkilled(map: Map<string, any>, goal: {shipData: Ship}): Boolean {
 }
 
 function addResult(resultArray: AttackAnswer[], attack: AttackAnswer, goalData: Ship, status: Status): AttackAnswer[] {
-    console.log('I am');
+    console.log('addResult function');
     const {position, direction, length} = goalData;
     let x = position.x;
     let y = position.y;
 
-    console.log(x, y);
-
     if (status === 'killed') {
         for (let i = 0; i < length; i++) {
-            let attackData = {
+            const attackData = {
                 ...attack,
                 data: {
                     ...attack.data,
@@ -139,28 +137,36 @@ function addResult(resultArray: AttackAnswer[], attack: AttackAnswer, goalData: 
 
             resultArray.push(attackData);
         }
-// Дописать логику добавления точек вокруг корабля
-        // for (let i = 0; i < length; i++) {
-        //     let attackData = {
-        //         ...attack,
-        //         data: {
-        //             ...attack.data,
-        //             position: {
-        //                 x,
-        //                 y,
-        //             },
-        //             status,
-        //         },
-        //     };
+        // Дописать логику добавления точек вокруг корабля
 
-        //     if (direction) {
-        //         y++;
-        //     } else {
-        //         x++;
-        //     }
+        for(let i = -1; i <= 1; i++) {
+            for (let j = -1; j <= length; j++) {
+              
+              const x = direction ? position.x + i : position.x + j;
+              const y = direction ? position.y + j : position.y + i;
 
-        //     resultArray.push(attackData);
-        // }
+              const attackData = {
+                ...attack,
+                data: {
+                    ...attack.data,
+                    position: {
+                        x,
+                        y,
+                    },
+                    status: "miss" as Status,
+                },
+            };
+        
+              const isAvailable = resultArray.find(value => value.data.position.x === x && value.data.position.y === y);
+        
+              if(!isAvailable) {
+                if(x >= 0 && x <= 9 && y >= 0 && y <= 9) {
+                    resultArray.push(attackData);
+                }
+              }
+        
+            }
+          }
 
     } else {
         let attackData = {
@@ -172,7 +178,6 @@ function addResult(resultArray: AttackAnswer[], attack: AttackAnswer, goalData: 
         };
         resultArray.push(attackData);
     }
-    console.log(resultArray);
     return resultArray;
 }
 
@@ -236,7 +241,7 @@ export const checkAttack = (attack: Attack): AttackAnswer[] => {
     } else {
         result.push(currentAttack);
     }
-    console.log('11111111111111111111111');
+    console.log('array with results: ');
     console.log(result);
     return result;
 };
