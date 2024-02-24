@@ -21,14 +21,14 @@ export type MessageType =
 export interface User {
     name: string;
     password?: string;
-    index?: string;
+    index?: number;
     error?: boolean;
     errorText?: string;
 }
 
 export interface RoomUser {
     name: string;
-    index?: string;
+    index?: number;
 }
 
 export interface RoomData {
@@ -44,7 +44,7 @@ export interface Room {
 
 interface WinnersData {
     name: string;
-    wins: string;
+    wins: number;
 }
 
 export interface Winners {
@@ -56,7 +56,7 @@ export interface Winners {
 export interface AddUserToRoom {
     type: MessageType;
     data: {
-        indexRoom: string;
+        indexRoom: number;
     };
     id: string;
 }
@@ -65,7 +65,7 @@ export interface CreateGame {
     type: MessageType;
     data: {
         idGame: string;
-        idPlayer: string;
+        idPlayer: number;
     };
     id: string;
 }
@@ -89,7 +89,7 @@ export interface StartGame {
     type: MessageType;
     data: {
         ships: Ship[];
-        currentPlayerIndex: string;
+        currentPlayerIndex: number;
     };
     id: string;
 }
@@ -107,7 +107,7 @@ export interface AddShips {
 export interface Turn {
     type: MessageType;
     data: {
-        currentPlayer: string;
+        currentPlayer: number;
     };
     id: string;
 }
@@ -130,5 +130,13 @@ export interface AttackAnswer {
 export interface Attack {
     type: MessageType;
     data: {gameId: string; x: number; y: number; indexPlayer: string};
+    id: string;
+}
+
+export interface Finish {
+    type: MessageType;
+    data: {
+        winPlayer: number | string;
+    };
     id: string;
 }

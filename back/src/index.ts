@@ -1,21 +1,21 @@
 import WebSocket, {WebSocketServer} from 'ws';
 import dotenv from 'dotenv';
-import {winnersData, roomData, shipsOfPlayers} from './store/store';
+import {winnersData, roomData, shipsOfGame} from './store/store';
 import {
     createRoom,
     regUser,
     addUserToRoom,
     createGame,
     addShipsForPlayer,
-    attack,
+    // attack,
     turn,
-    checkAttack,
+    // checkAttack,
 } from './service/websocketHandlers';
-import {fillMapWithShips, getShips, parseObject, stringifyObject} from './helpers/helpers';
-import {CreateGame, Position, StartGame, Turn} from './types/types';
+import {fillMapWithShips, parseObject, stringifyObject} from './helpers/helpers';
+import {CreateGame, Position, StartGame, Turn, User} from './types/types';
 
 export interface ClientWebsocket extends WebSocket {
-    playerId: string;
+    playerId: number;
 }
 
 dotenv.config();
@@ -26,15 +26,12 @@ const wss = new WebSocketServer({port: PORT});
 let indexPlayer = 1;
 let currentTurn: Turn;
 
-export let mapWithShipsOfPlayer1: Map<string, Map<string, any>>;
-export let mapWithShipsOfPlayer2: Map<string, Map<string, any>>;
-
 wss.on('connection', function connection(ws: ClientWebsocket) {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`Server is running on ws://localhost:${PORT}/`);
 
     ws.on('error', console.error);
 
-    ws.playerId = indexPlayer.toString();
+    ws.playerId = indexPlayer;
     indexPlayer++;
 
     ws.on('message', function message(data) {
@@ -66,122 +63,91 @@ wss.on('connection', function connection(ws: ClientWebsocket) {
             case 'add_user_to_room':
                 if (ws.readyState === WebSocket.OPEN) {
                     addUserToRoom(dataObj, ws.playerId);
+                    const room = roomData.data.findIndex((room) => room.roomId === parseObject(dataObj.data).indexRoom);
+                    console.log(roomData.data[room]);
                     wss.clients.forEach((client) => {
-                        const newGame: CreateGame = createGame(roomData.data, (client as ClientWebsocket).playerId);
+                        const newGame: CreateGame = createGame(
+                            dataObj,
+                            roomData.data,
+                            (client as ClientWebsocket).playerId
+                        );
                         client.send(stringifyObject({...roomData, data: stringifyObject(roomData.data)}));
                         client.send(stringifyObject({...newGame, data: stringifyObject(newGame.data)}));
-                        client.send(stringifyObject({...roomData, data: stringifyObject([])}));
+                        client.send(stringifyObject({...roomData.data, data: stringifyObject([])}));
                     });
-                    roomData.data = [];
-                    console.log(stringifyObject(roomData));
+                    roomData.data.splice(room, 1);
+                    console.log(roomData.data);
                 }
                 break;
             case 'add_ships':
                 console.log('Game started');
                 const shipsOfCurrentPlayer = addShipsForPlayer(dataObj);
-                shipsOfPlayers.push(shipsOfCurrentPlayer);
+                const gameId = parseObject(dataObj.data).gameId;
 
-                if (shipsOfPlayers.length === 2) {
+                let shipsInMap = shipsOfGame.get(gameId);
+
+                if (!shipsInMap) {
+                    let shipsInMap = [];
+                    shipsInMap.push(shipsOfCurrentPlayer);
+                    shipsOfGame.set(gameId, shipsInMap);
+                } else {
+                    shipsOfGame.set(gameId, [...shipsInMap, shipsOfCurrentPlayer]);
+                }
+
+                console.log(shipsOfGame);
+
+                let sizeOfGameBoard = shipsOfGame.get(gameId)?.length;
+
+                if (sizeOfGameBoard! > 1 && sizeOfGameBoard! % 2 === 0) {
+                    let currentGameShips = shipsOfGame.get(gameId)?.slice(-2);
                     currentTurn = turn(ws.playerId);
-
-                    mapWithShipsOfPlayer1 = new Map();
-                    mapWithShipsOfPlayer2 = new Map();
-
-                    mapWithShipsOfPlayer1.set(shipsOfPlayers[0].data.currentPlayerIndex, fillMapWithShips(shipsOfPlayers[1].data.ships));
-                    mapWithShipsOfPlayer2.set(shipsOfPlayers[1].data.currentPlayerIndex, fillMapWithShips(shipsOfPlayers[0].data.ships));
-
-                    console.log('Full Boards: ')
-                    console.log(mapWithShipsOfPlayer1);
-                    console.log(mapWithShipsOfPlayer2);
-
                     wss.clients.forEach((client) => {
-                        const shipsOfClient = getShips(shipsOfPlayers, (client as ClientWebsocket).playerId);
-                        client.send(stringifyObject({...shipsOfClient, data: stringifyObject(shipsOfClient!.data)}));
-                        client.send(stringifyObject({...currentTurn, data: stringifyObject(currentTurn.data)}));
-                    });
-                }
-                break;
-            case 'attack':
-                if (currentTurn.data.currentPlayer === ws.playerId) {
-                    const currentAttack = attack(dataObj);
-                    let currentPlayer = currentAttack[0].data.currentPlayer;
-                    const firstPlayer = currentPlayer;
-                    const secondPlayer = shipsOfPlayers.filter(
-                            (player) => player.data.currentPlayerIndex !== currentPlayer
-                        )[0].data.currentPlayerIndex;
-                        
-                        if (currentAttack[0].data.status === 'miss') {
-                                currentPlayer = currentPlayer === firstPlayer ? secondPlayer : firstPlayer;
-                            }
-                            
-                            currentTurn = turn(currentPlayer);
-                            
-                            // console.log(currentAttack);
-                            // console.log(currentTurn);
-                            
-                           
-                    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ?????????????????????????
-                    // let currentPlayer = ws.playerId;
-                    // const arr = [
-                    //     {
-                    //         type: 'attack',
-                    //         data: {
-                    //             position: {
-                    //                 x: 3,
-                    //                 y: 3,
-                    //             },
-                    //             currentPlayer,
-                    //             status: 'miss',
-                    //         },
-                    //         id: '0',
-                    //     },
-                    //     {
-                    //         type: 'attack',
-                    //         data: {
-                    //             position: {
-                    //                 x: 2,
-                    //                 y: 2,
-                    //             },
-                    //             currentPlayer,
-                    //             status: 'miss',
-                    //         },
-                    //         id: '0',
-                    //     },
-                    //     {
-                    //         type: 'attack',
-                    //         data: {
-                    //             position: {
-                    //                 x: 2,
-                    //                 y: 3,
-                    //             },
-                    //             currentPlayer,
-                    //             status: 'miss',
-                    //         },
-                    //         id: '0',
-                    //     },
-                    // ];
-                    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ?????????????????????????
-
-                    wss.clients.forEach((client) => {
-                        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ?????????????????????????
-                        // arr.forEach((currentAttack) => {
-                        //     client.send(
-                        //         stringifyObject({...currentAttack, data: stringifyObject(currentAttack!.data)})
-                        //     );
-                        // });
-                        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ?????????????????????????
-
-                        currentAttack.forEach((attack) => {
+                        const currentGame = currentGameShips
+                            ?.find(
+                                (game: StartGame) =>
+                                    game.data.currentPlayerIndex === (client as ClientWebsocket).playerId
+                            );
+                        if (currentGame && client.readyState === WebSocket.OPEN) {
+                            const shipsOfClient = currentGame;
                             client.send(
-                                stringifyObject({...attack, data: stringifyObject(attack!.data)})
-                            )
-                        })
-                        client.send(stringifyObject({...currentTurn, data: stringifyObject(currentTurn.data)}));
-
-                        // client.send(stringifyObject({...currentAttack, data: stringifyObject(currentAttack!.data)}));
+                                stringifyObject({...shipsOfClient, data: stringifyObject(shipsOfClient!.data)})
+                            );
+                            client.send(stringifyObject({...currentTurn, data: stringifyObject(currentTurn.data)}));
+                        }
                     });
                 }
                 break;
+
+            // case 'attack':
+            //     if (currentTurn.data.currentPlayer === ws.playerId) {
+            //         const currentAttack = attack(dataObj);
+
+            //         if (currentAttack.length === 0) {
+            //             return;
+            //         }
+
+            //         let currentPlayer = currentAttack[0].data.currentPlayer;
+
+            //         const firstPlayer = currentPlayer;
+
+            //         const secondPlayer = shipsOfPlayers.filter(
+            //             (player) => player.data.currentPlayerIndex !== currentPlayer
+            //         )[0].data.currentPlayerIndex;
+
+            //         if (currentAttack[0].data.status === 'miss') {
+            //             currentPlayer = currentPlayer === firstPlayer ? secondPlayer : firstPlayer;
+            //         }
+
+            //         currentTurn = turn(currentPlayer);
+
+            //         wss.clients.forEach((client) => {
+            //             currentAttack.forEach((attack) => {
+            //                 client.send(stringifyObject({...attack, data: stringifyObject(attack!.data)}));
+            //             });
+            //             client.send(stringifyObject({...currentTurn, data: stringifyObject(currentTurn.data)}));
+            //         });
+            //     }
+            //     break;
             default:
                 break;
         }

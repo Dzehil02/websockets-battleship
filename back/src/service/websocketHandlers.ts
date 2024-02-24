@@ -4,6 +4,7 @@ import {
     Attack,
     AttackAnswer,
     CreateGame,
+    Finish,
     Position,
     Room,
     RoomData,
@@ -14,18 +15,13 @@ import {
     Turn,
     User,
 } from '../types/types';
-import {users, roomData, roomUsers, winnersData, shipsOfPlayers} from '../store/store';
-import {fillMapWithShips, getShipsOfEnemy, parseObject} from '../helpers/helpers';
-import {mapWithShipsOfPlayer1, mapWithShipsOfPlayer2} from '..';
+import {users, roomData, winnersData} from '../store/store';
+import {fillMapWithShips, parseObject} from '../helpers/helpers';
 import {stringify} from 'querystring';
 
 let indexRoom = 1;
 
-export const getRoomUsers = (): RoomUser[] => {
-    return roomUsers;
-};
-
-export const regUser = (userReceivedData: User, playerId: string): User => {
+export const regUser = (userReceivedData: User, playerId: number): User => {
     const newUser = {
         name: userReceivedData.name,
         index: playerId,
@@ -38,9 +34,10 @@ export const regUser = (userReceivedData: User, playerId: string): User => {
     return newUser;
 };
 
-export const createRoom = (playerId: string): Room => {
+export const createRoom = (playerId: number): Room => {
     const user = users.get(playerId);
     if (user) {
+        const roomUsers: RoomUser[] = [];
         roomUsers.push({name: user.name, index: user.index});
         roomData.data.push({roomId: indexRoom.toString(), roomUsers});
     }
@@ -48,20 +45,21 @@ export const createRoom = (playerId: string): Room => {
     return roomData;
 };
 
-export const addUserToRoom = (addUserData: AddUserToRoom, playerId: string): void => {
+export const addUserToRoom = (addUserData: AddUserToRoom, playerId: number): void => {
     const roomNumber = parseObject(addUserData.data).indexRoom;
     const room = roomData.data.find((room) => room.roomId === roomNumber);
     const user = users.get(playerId);
-    if (user && room && roomUsers.length < 2) {
+    if (user && room && room.roomUsers.length < 2) {
         room.roomUsers.push({name: user.name, index: user.index});
     }
 };
 
-export const createGame = (dataOfRoom: RoomData[], playerId: string): CreateGame => {
+export const createGame = (addUserData: AddUserToRoom, dataOfRoom: RoomData[], playerId: number): CreateGame => {
+    const roomNumber = parseObject(addUserData.data).indexRoom;
     return {
         type: 'create_game',
         data: {
-            idGame: dataOfRoom[0].roomId,
+            idGame: roomNumber,
             idPlayer: playerId,
         },
         id: '0',
@@ -79,7 +77,7 @@ export const addShipsForPlayer = (dataOfGame: AddShips): StartGame => {
     };
 };
 
-export const turn = (playerId: string): Turn => {
+export const turn = (playerId: number): Turn => {
     return {
         type: 'turn',
         data: {
@@ -89,159 +87,168 @@ export const turn = (playerId: string): Turn => {
     };
 };
 
-export const attack = (attack: Attack): AttackAnswer[] => {
-    const result = checkAttack(attack);
-    return result;
-};
+// export const attack = (attack: Attack): AttackAnswer[] => {
+//     const result = checkAttack(attack);
+//     return result;
+// };
 
-function checkkilled(map: Map<string, any>, goal: {shipData: Ship}): Boolean {
-    const values = map!.values();
-    const valuesArray = Array.from(values);
+// export const finishGame = (currentPlayer: string): Finish => {
+//     return {
+//         type: 'finish',
+//         data: {
+//             winPlayer: currentPlayer,
+//         },
+//         id: '0',
+//     };
+// };
 
-    let lookForShip = valuesArray.find(
-        (value) =>
-            value.shipData.position.x === goal.shipData.position.x &&
-            value.shipData.position.y === goal.shipData.position.y
-    );
-    if (lookForShip) {
-        return true;
-    }
-    return false;
-}
+// function checkkilled(map: Map<string, any>, goal: {shipData: Ship}): Boolean {
+//     const values = map!.values();
+//     const valuesArray = Array.from(values);
 
-function addResult(resultArray: AttackAnswer[], attack: AttackAnswer, goalData: Ship, status: Status): AttackAnswer[] {
-    console.log('addResult function');
-    const {position, direction, length} = goalData;
-    let x = position.x;
-    let y = position.y;
+//     let lookForShip = valuesArray.find(
+//         (value) =>
+//             value.shipData.position.x === goal.shipData.position.x &&
+//             value.shipData.position.y === goal.shipData.position.y
+//     );
+//     if (lookForShip) {
+//         return true;
+//     }
+//     return false;
+// }
 
-    if (status === 'killed') {
-        for (let i = 0; i < length; i++) {
-            const attackData = {
-                ...attack,
-                data: {
-                    ...attack.data,
-                    position: {
-                        x,
-                        y,
-                    },
-                    status,
-                },
-            };
+// function addResult(resultArray: AttackAnswer[], attack: AttackAnswer, goalData: Ship, status: Status): AttackAnswer[] {
+//     console.log('addResult function');
+//     const {position, direction, length} = goalData;
+//     let x = position.x;
+//     let y = position.y;
 
-            if (direction) {
-                y++;
-            } else {
-                x++;
-            }
+//     if (status === 'killed') {
+//         for (let i = 0; i < length; i++) {
+//             const attackData = {
+//                 ...attack,
+//                 data: {
+//                     ...attack.data,
+//                     position: {
+//                         x,
+//                         y,
+//                     },
+//                     status,
+//                 },
+//             };
 
-            resultArray.push(attackData);
-        }
-        // Дописать логику добавления точек вокруг корабля
+//             if (direction) {
+//                 y++;
+//             } else {
+//                 x++;
+//             }
 
-        for(let i = -1; i <= 1; i++) {
-            for (let j = -1; j <= length; j++) {
-              
-              const x = direction ? position.x + i : position.x + j;
-              const y = direction ? position.y + j : position.y + i;
+//             resultArray.push(attackData);
+//         }
 
-              const attackData = {
-                ...attack,
-                data: {
-                    ...attack.data,
-                    position: {
-                        x,
-                        y,
-                    },
-                    status: "miss" as Status,
-                },
-            };
-        
-              const isAvailable = resultArray.find(value => value.data.position.x === x && value.data.position.y === y);
-        
-              if(!isAvailable) {
-                if(x >= 0 && x <= 9 && y >= 0 && y <= 9) {
-                    resultArray.push(attackData);
-                }
-              }
-        
-            }
-          }
+//         for (let i = -1; i <= 1; i++) {
+//             for (let j = -1; j <= length; j++) {
+//                 const x = direction ? position.x + i : position.x + j;
+//                 const y = direction ? position.y + j : position.y + i;
 
-    } else {
-        let attackData = {
-            ...attack,
-            data: {
-                ...attack.data,
-                status: status,
-            },
-        };
-        resultArray.push(attackData);
-    }
-    return resultArray;
-}
+//                 const attackData = {
+//                     ...attack,
+//                     data: {
+//                         ...attack.data,
+//                         position: {
+//                             x,
+//                             y,
+//                         },
+//                         status: 'miss' as Status,
+//                     },
+//                 };
 
-export const checkAttack = (attack: Attack): AttackAnswer[] => {
-    const attackData = parseObject(attack.data);
-    let status: Status = 'miss';
-    const currentPlayer = attackData.indexPlayer;
+//                 const isAvailable = resultArray.find(
+//                     (value) => value.data.position.x === x && value.data.position.y === y
+//                 );
 
-    const currentAttack: AttackAnswer = {
-        type: 'attack',
-        data: {
-            position: {
-                x: attackData.x,
-                y: attackData.y,
-            },
-            currentPlayer: attackData.indexPlayer,
-            status,
-        },
-        id: '0',
-    };
+//                 if (!isAvailable) {
+//                     if (x >= 0 && x <= 9 && y >= 0 && y <= 9) {
+//                         resultArray.push(attackData);
+//                     }
+//                 }
+//             }
+//         }
+//     } else {
+//         let attackData = {
+//             ...attack,
+//             data: {
+//                 ...attack.data,
+//                 status: status,
+//             },
+//         };
+//         resultArray.push(attackData);
+//     }
+//     return resultArray;
+// }
 
-    let result: AttackAnswer[] = [];
+// export const checkAttack = (attack: Attack): AttackAnswer[] => {
+//     const attackData = parseObject(attack.data);
+//     let status: Status = 'miss';
+//     const currentPlayer = attackData.indexPlayer;
 
-    const enemyShips = mapWithShipsOfPlayer1.has(currentPlayer)
-        ? mapWithShipsOfPlayer1.get(currentPlayer)
-        : mapWithShipsOfPlayer2.get(currentPlayer);
+//     const currentAttack: AttackAnswer = {
+//         type: 'attack',
+//         data: {
+//             position: {
+//                 x: attackData.x,
+//                 y: attackData.y,
+//             },
+//             currentPlayer: attackData.indexPlayer,
+//             status,
+//         },
+//         id: '0',
+//     };
 
-    const key = JSON.stringify({
-        x: attackData.x,
-        y: attackData.y,
-    });
+//     let result: AttackAnswer[] = [];
 
-    const goal = enemyShips?.has(key) ? enemyShips!.get(key) : undefined;
-    console.log(goal);
+//     const enemyShips = mapWithShipsOfPlayer1.has(currentPlayer)
+//         ? mapWithShipsOfPlayer1.get(currentPlayer)
+//         : mapWithShipsOfPlayer2.get(currentPlayer);
 
-    if (goal) {
-        switch (goal.shipData.type) {
-            case 'small':
-                enemyShips?.delete(key);
-                status = 'killed';
-                result = addResult(result, currentAttack, goal.shipData, status);
-                break;
-            case 'medium':
-                enemyShips?.delete(key);
-                status = checkkilled(enemyShips!, goal) ? 'shot' : 'killed';
-                result = addResult(result, currentAttack, goal.shipData, status);
-                break;
-            case 'large':
-                enemyShips?.delete(key);
-                status = checkkilled(enemyShips!, goal) ? 'shot' : 'killed';
-                result = addResult(result, currentAttack, goal.shipData, status);
-                break;
-            case 'huge':
-                enemyShips?.delete(key);
-                status = checkkilled(enemyShips!, goal) ? 'shot' : 'killed';
-                result = addResult(result, currentAttack, goal.shipData, status);
-                break;
-            default:
-                break;
-        }
-    } else {
-        result.push(currentAttack);
-    }
-    console.log('array with results: ');
-    console.log(result);
-    return result;
-};
+//     const key = JSON.stringify({
+//         x: attackData.x,
+//         y: attackData.y,
+//     });
+
+//     const goal = enemyShips?.has(key) ? enemyShips!.get(key) : undefined;
+//     console.log(goal);
+
+//     if (goal) {
+//         switch (goal.shipData.type) {
+//             case 'small':
+//                 enemyShips?.delete(key);
+//                 status = 'killed';
+//                 result = addResult(result, currentAttack, goal.shipData, status);
+//                 break;
+//             case 'medium':
+//                 enemyShips?.delete(key);
+//                 status = checkkilled(enemyShips!, goal) ? 'shot' : 'killed';
+//                 result = addResult(result, currentAttack, goal.shipData, status);
+//                 break;
+//             case 'large':
+//                 enemyShips?.delete(key);
+//                 status = checkkilled(enemyShips!, goal) ? 'shot' : 'killed';
+//                 result = addResult(result, currentAttack, goal.shipData, status);
+//                 break;
+//             case 'huge':
+//                 enemyShips?.delete(key);
+//                 status = checkkilled(enemyShips!, goal) ? 'shot' : 'killed';
+//                 result = addResult(result, currentAttack, goal.shipData, status);
+//                 break;
+//             default:
+//                 break;
+//         }
+//     } else {
+//         result.push(currentAttack);
+//     }
+
+//     console.log('array with results: ');
+//     console.log(result);
+//     return result;
+// };
