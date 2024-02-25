@@ -5,6 +5,7 @@ import {
     AttackAnswer,
     CreateGame,
     Finish,
+    RandomAttack,
     Room,
     RoomData,
     RoomUser,
@@ -13,6 +14,7 @@ import {
     Status,
     Turn,
     User,
+    Winners,
 } from '../types/types';
 import {users, roomData, arrayOfMapWithShipsOfPlayer} from '../store/store';
 import {fillMapWithShips, parseObject} from '../helpers/helpers';
@@ -24,8 +26,16 @@ export const regUser = (userReceivedData: User, playerId: number): User => {
         name: userReceivedData.name,
         index: playerId,
         error: false,
-        errorText: 'Registration error',
+        errorText: '',
     };
+
+    const values = users!.values();
+    const valuesArray = Array.from(values);
+
+    if (valuesArray.find((value) => value.name === userReceivedData.name)) {
+        newUser.error = true;
+        newUser.errorText = 'User with this name already exists';
+    }
 
     users.set(newUser.index, newUser);
 
@@ -65,7 +75,6 @@ export const createGame = (addUserData: AddUserToRoom, dataOfRoom: RoomData[], p
 };
 
 export const addShipsForPlayer = (dataOfGame: AddShips): StartGame => {
-
     return {
         type: 'start_game',
         data: {
@@ -109,12 +118,28 @@ export const turn = (playerId: number): Turn => {
     };
 };
 
+export const randomAttackForPlayer = (randomAttack: RandomAttack): Attack => {
+    const x = Math.floor(Math.random() * 10);
+    const y = Math.floor(Math.random() * 10);
+    const result: Attack = {
+        type: 'attack',
+        data: {
+            gameId: parseObject(randomAttack.data).gameId.toString(),
+            x,
+            y,
+            indexPlayer: parseObject(randomAttack.data).indexPlayer,
+        },
+        id: '0',
+    };
+    return result;
+};
+
 export const attack = (attack: Attack, enemyShips: Map<string, any>): AttackAnswer[] => {
     const result = checkAttack(attack, enemyShips);
     return result;
 };
 
-export const finishGame = (currentPlayer: string): Finish => {
+export const finishGame = (currentPlayer: number): Finish => {
     return {
         type: 'finish',
         data: {
@@ -140,7 +165,6 @@ function checkkilled(map: Map<string, any>, goal: {shipData: Ship}): Boolean {
 }
 
 function addResult(resultArray: AttackAnswer[], attack: AttackAnswer, goalData: Ship, status: Status): AttackAnswer[] {
-
     const {position, direction, length} = goalData;
     let x = position.x;
     let y = position.y;
@@ -210,8 +234,13 @@ function addResult(resultArray: AttackAnswer[], attack: AttackAnswer, goalData: 
 }
 
 export const checkAttack = (attack: Attack, enemyShips?: Map<string, any>): AttackAnswer[] => {
-    const attackData = parseObject(attack.data);
-    console.log('checkAttack');
+    let attackData;
+
+    if (typeof attack.data === 'object') {
+        attackData = attack.data;
+    } else {
+        attackData = parseObject(attack.data);
+    }
 
     let status: Status = 'miss';
     const currentPlayer = attackData.indexPlayer;
@@ -237,13 +266,12 @@ export const checkAttack = (attack: Attack, enemyShips?: Map<string, any>): Atta
     });
 
     const goal = enemyShips?.has(key) ? enemyShips.get(key) : undefined;
-    console.log(goal);
 
     if (goal) {
         switch (goal.shipData.type) {
             case 'small':
-                enemyShips?.delete(key);
                 status = 'killed';
+                enemyShips?.delete(key);
                 result = addResult(result, currentAttack, goal.shipData, status);
                 break;
             case 'medium':
@@ -268,7 +296,17 @@ export const checkAttack = (attack: Attack, enemyShips?: Map<string, any>): Atta
         result.push(currentAttack);
     }
 
-    console.log('array with results: ');
-    console.log(result);
     return result;
+};
+
+export const updateWinners = (winnersData: Winners, currentPlayer: number): void => {
+    const userName = users.get(currentPlayer)?.name;
+    if (userName) {
+        const winner = winnersData.data.find((value) => value.name === userName);
+        if (winner) {
+            winner.wins += 1;
+        } else {
+            winnersData.data.push({name: userName, wins: 1});
+        }
+    }
 };

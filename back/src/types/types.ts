@@ -129,14 +129,23 @@ export interface AttackAnswer {
 
 export interface Attack {
     type: MessageType;
-    data: {gameId: string; x: number; y: number; indexPlayer: string};
+    data: {gameId: string; x: number; y: number; indexPlayer: number};
+    id: string;
+}
+
+export interface RandomAttack {
+    type: MessageType;
+    data: {
+        gameId: string;
+        indexPlayer: number;
+    };
     id: string;
 }
 
 export interface Finish {
     type: MessageType;
     data: {
-        winPlayer: number | string;
+        winPlayer: number;
     };
     id: string;
 }

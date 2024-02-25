@@ -10,6 +10,9 @@ import {
     turn,
     attack,
     addEnemyShips,
+    finishGame,
+    updateWinners,
+    randomAttackForPlayer,
 } from './service/websocketHandlers';
 import {parseObject, stringifyObject} from './helpers/helpers';
 import {CreateGame, StartGame, Turn} from './types/types';
@@ -58,12 +61,14 @@ wss.on('connection', function connection(ws: ClientWebsocket) {
                     }
                 });
                 break;
+
             case 'create_room':
                 if (ws.readyState === WebSocket.OPEN) {
                     const room = createRoom(ws.playerId);
                     ws.send(stringifyObject({...roomData, data: stringifyObject(room.data)}));
                 }
                 break;
+
             case 'add_user_to_room':
                 if (ws.readyState === WebSocket.OPEN) {
                     addUserToRoom(dataObj, ws.playerId);
@@ -81,6 +86,7 @@ wss.on('connection', function connection(ws: ClientWebsocket) {
                     roomData.data.splice(room, 1);
                 }
                 break;
+
             case 'add_ships':
                 console.log('Game started');
 
@@ -128,7 +134,9 @@ wss.on('connection', function connection(ws: ClientWebsocket) {
                     const gameId = parseObject(dataObj.data).gameId;
                     let currentGameShips = shipsOfGame.get(gameId)?.slice(-2);
                     const firstPlayer = currentTurn.data.currentPlayer.toString();
-                    const secondPlayer = currentGameShips?.find((game: StartGame) => game.data.currentPlayerIndex !== +firstPlayer);
+                    const secondPlayer = currentGameShips?.find(
+                        (game: StartGame) => game.data.currentPlayerIndex !== +firstPlayer
+                    );
 
                     if (currentAttack.length === 0) {
                         return;
@@ -144,11 +152,86 @@ wss.on('connection', function connection(ws: ClientWebsocket) {
                     currentTurn = turn(+currentPlayer);
 
                     wss.clients.forEach((client) => {
+                        const currentGame = currentGameShips?.find(
+                            (game: StartGame) => game.data.currentPlayerIndex === (client as ClientWebsocket).playerId
+                        );
+                        if (currentGame && client.readyState === WebSocket.OPEN) {
+                            const shipsOfClient = currentGame;
+                            currentAttack.forEach((attack) => {
+                                client.send(stringifyObject({...attack, data: stringifyObject(attack!.data)}));
+                            });
+                            client.send(stringifyObject({...currentTurn, data: stringifyObject(currentTurn.data)}));
+                        }
+                    });
+
+                    if (enemyShips!.get(ws.playerId.toString()).size < 1 && currentAttack[0].data.status === 'killed') {
+                        const finish = finishGame(parseInt(currentPlayer));
+                        updateWinners(winnersData, parseInt(currentPlayer));
+                        wss.clients.forEach((client) => {
+                            const currentGame = currentGameShips?.find(
+                                (game: StartGame) =>
+                                    game.data.currentPlayerIndex === (client as ClientWebsocket).playerId
+                            );
+                            if (currentGame && client.readyState === WebSocket.OPEN) {
+                                client.send(stringifyObject({...finish, data: stringifyObject(finish.data)}));
+                                client.send(stringifyObject({...winnersData, data: stringifyObject(winnersData.data)}));
+                            }
+                        });
+                    }
+                }
+                break;
+
+            case 'randomAttack':
+                if (currentTurn.data.currentPlayer === ws.playerId) {
+                    const enemyShips = mapWithShipsOfPlayer.get(ws.playerId.toString());
+
+                    const gameId = parseObject(dataObj.data).gameId;
+
+                    let currentGameShips = shipsOfGame.get(gameId)?.slice(-2);
+
+                    const firstPlayer = currentTurn.data.currentPlayer.toString();
+                    const secondPlayer = currentGameShips?.find(
+                        (game: StartGame) => game.data.currentPlayerIndex !== +firstPlayer
+                    );
+
+                    let currentPlayer = firstPlayer;
+                    let secondPlayerIndex = secondPlayer ? secondPlayer.data.currentPlayerIndex.toString() : '';
+
+                    const randomAttack = randomAttackForPlayer(dataObj);
+
+                    const currentAttack = attack(randomAttack, enemyShips!.get(ws.playerId.toString())!);
+
+                    if (currentAttack.length === 0) {
+                        return;
+                    }
+
+                    if (currentAttack[0].data.status === 'miss') {
+                        currentPlayer = currentPlayer === firstPlayer ? secondPlayerIndex : firstPlayer;
+                    }
+
+                    currentTurn = turn(+currentPlayer);
+
+                    wss.clients.forEach((client) => {
                         currentAttack.forEach((attack) => {
                             client.send(stringifyObject({...attack, data: stringifyObject(attack!.data)}));
                         });
                         client.send(stringifyObject({...currentTurn, data: stringifyObject(currentTurn.data)}));
                     });
+
+                    if (enemyShips!.get(ws.playerId.toString()).size < 1 && currentAttack[0].data.status === 'killed') {
+                        const finish = finishGame(parseInt(currentPlayer));
+                        updateWinners(winnersData, parseInt(currentPlayer));
+                        wss.clients.forEach((client) => {
+                            const currentGame = currentGameShips?.find(
+                                (game: StartGame) =>
+                                    game.data.currentPlayerIndex === (client as ClientWebsocket).playerId
+                            );
+                            if (currentGame && client.readyState === WebSocket.OPEN) {
+                                client.send(stringifyObject({...finish, data: stringifyObject(finish.data)}));
+                                client.send(stringifyObject({...winnersData, data: stringifyObject(winnersData.data)}));
+                            }
+                        });
+                    }
                 }
                 break;
             default:
