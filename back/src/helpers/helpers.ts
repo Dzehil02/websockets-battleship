@@ -1,6 +1,4 @@
-import { stringify } from "querystring";
-import { ClientWebsocket } from "..";
-import { Position, Ship, StartGame } from "../types/types";
+import { Ship } from "../types/types";
 
 export const parseObject = (obj: any) => {
     return JSON.parse(obj);
@@ -9,18 +7,6 @@ export const parseObject = (obj: any) => {
 export const stringifyObject = (obj: any) => {
     return JSON.stringify(obj);
 }
-
-// export const getShips = (shipsOfPlayers: StartGame[], playerId: string): StartGame => {
-//     return shipsOfPlayers.find(
-//         (player) => player.data.currentPlayerIndex === playerId
-//     ) || {} as StartGame;
-// }
-
-// export const getShipsOfEnemy = (shipsOfPlayers: StartGame[], playerId: string): StartGame => {
-//     return shipsOfPlayers.find(
-//         (player) => player.data.currentPlayerIndex !== playerId
-//     ) || {} as StartGame;
-// }
 
 export function fillMapWithShips(ships: Ship[]) {
     const gameMap: Map<string, any> = new Map();
